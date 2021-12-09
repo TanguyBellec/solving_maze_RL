@@ -552,20 +552,6 @@ def create_blue_rectangles(num_columns, num_rows, cell_width, cell_height, canva
 
 
 
-def update_of_the_visual_window(
-    maze, cell_width, cell_height, blue_rectangles_ids, green_rectangles_ids, canva
-):
-    num_columns = len(maze)
-    num_rows = len(maze[0])
-    for index_row in range(num_rows):           #update to get 
-        for index_column in range(num_columns):
-            if maze[index_row][index_column] == 1:
-                canva.itemconfig(green_rectangles_ids[index_row][index_column], state="hidden")
-                canva.itemconfig(blue_rectangles_ids[index_row][index_column], state="normal")
-            if (maze[index_row][index_column] == 2) or (maze[index_row][index_column] == -1) or (maze[index_row][index_column] == -9):
-                canva.itemconfig(green_rectangles_ids[index_row][index_column], state="normal")
-            
-    canva.update()
 
 
 def optimized_update_of_the_visual_window(                                              #haven't tried it yet
