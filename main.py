@@ -14,6 +14,16 @@ import sys
 # Pour l'instant on commencera avec une matrice 10x10
 
 
+
+
+                        ########################
+                        ###                 ####
+                        ###   INIT          ####
+                        ###                 ####
+                        ########################
+
+
+
 def init_empty_maze(num_rows, num_columns):
 
     maze = []
@@ -62,6 +72,19 @@ def init_obstacles(maze, obstacles):
 # How to get indices of the neighbours
 
 # Test if we are above borders or if we hit a wall
+
+
+
+
+
+
+                        ####################################
+                        ###                             ####
+                        ###   RETURN INFORMATION        ####
+                        ###                             ####
+                        ####################################
+
+
 
 
 def up_neighbour(
@@ -177,14 +200,77 @@ def possible_next_not_special_undiscovered_state(current_state, maze):
     return possible_next
 
 
-def random_choose_between_possible_undiscovered_states(current_state, maze):
+def can_end_maze_in_one_move(current_state, end, maze):
+    if(up_neighbour(current_state, maze) == end):
+        return 1
+    if(right_neighbour(current_state, maze) == end):
+        return 1
+    if(down_neighbour(current_state, maze) == end):
+        return 1
+    if(left_neighbour(current_state, maze) == end):
+        return 1
+    return 0
 
+
+def random_choose_between_possible_undiscovered_states(current_state, end, maze):
     possible_next_states = possible_next_not_special_undiscovered_state(current_state, maze)    #issue when len == 0
-    if(possible_next_states == 0):
-        return random_movement
+    if(len(possible_next_states) == 0):
+        return random_movement(current_state, maze)[0]
     rand = randint(0, len(possible_next_states) - 1)
 
     return possible_next_states[rand]
+
+
+
+
+
+def pure_manhattan_distance_to_end_point(
+        current_state, end, maze
+    ):
+    print(current_state)  #current_stae = 1 when we hit an obstacle
+    print(end)
+    vertical_distance = abs(current_state[0] - end[0])
+    horizontal_distance = abs(current_state[1] - end[1])
+    return horizontal_distance + vertical_distance
+
+
+
+def closest_point_to_the_end(current_state, end, maze):
+    possible_options = possible_movement(current_state, maze)
+    smallest_distance = 1000000
+    counter = 0
+    distances = []
+    for option in possible_options:
+        if(not(option == 0 or option == -1 or option == 2)):          # for now we don't make difference between wall and border
+            current_distance = pure_manhattan_distance_to_end_point(possible_options[counter], end, maze)
+            if(current_distance < smallest_distance):
+                smallest_distance = current_distance
+                option_closest_to_the_end = option
+            distances.append(current_distance)
+        else:
+            distances.append(10000)
+        counter += 1
+    if(maze_is_finished(current_state, end, maze)):
+        return [1, 1]
+    return [distances, option_closest_to_the_end]
+    
+
+
+def maze_is_finished(current_state, end, maze):
+    if(current_state == end):
+        return 1
+    return 0
+
+
+
+
+
+                        ########################
+                        ###                 ####
+                        ###   ACTION        ####
+                        ###                 ####
+                        ########################
+
 
 
 def actualize_state(current_state, next_state, maze):
@@ -205,11 +291,7 @@ def actualize_state(current_state, next_state, maze):
 
 
 
-#First modelization of the solution, at each state we gonna do a random
-# authorized movement untill we get to the end of the maze
-
-
-def random_movement(current_state, maze):
+def random_movement(current_state, maze):   
 
     movement = possible_movement(current_state, maze)
 
@@ -241,6 +323,27 @@ def random_movement(current_state, maze):
                 return [movement[counter], maze]
 
             counter_possible_movement += 1
+
+
+
+def go_to_closest_point_to_the_end(current_state, end, maze):
+
+    next_state = closest_point_to_the_end(current_state, end, maze)[1]
+    distances = closest_point_to_the_end(current_state, end, maze)[0]
+    maze = actualize_state(current_state, next_state, maze)[0]
+
+    return [next_state, maze]
+
+    
+
+                        ########################
+                        ###                 ####
+                        ###   JOURNEY       ####
+                        ###                 ####
+                        ########################
+
+#First modelization of the solution, at each state we gonna do a random
+# authorized movement untill we get to the end of the maze
 
 
 def random_journey(
@@ -281,39 +384,40 @@ def random_journey(
 
 
 
+
+
+
 #Second modelization, here we are will visit a random state which hasn't been visited
 # many problem mgiht occur
 
 def journey_to_an_unknown_world(
         obstacles, start, end, num_rows, num_columns, maze
     ):
-
-    init_state = start
-    new_state = random_choose_between_possible_undiscovered_states(init_state, maze)
-    new_maze = actualize_state(init_state, new_state, maze)[0]
-    [current_state, current_maze] = [new_state, new_maze]
-    update_of_the_visual_window(
-                            maze, cell_width, cell_height, blue_rectangle_ids, green_rectangle_ids, canva
-                            )
-
+    new_state = start
+    current_state = start
     for counter in range(10000):
-        new_state = random_choose_between_possible_undiscovered_states(current_state, new_maze)
-        maze = actualize_state(current_state, new_state, new_maze)[0]
-        time.sleep(0.3)
-        update_of_the_visual_window(
-                            maze, cell_width, cell_height, blue_rectangle_ids, green_rectangle_ids, canva
-                            )
-        # if new_iteration == [1, 1]:  # stopping condition, we finished the maze
-        #                         #might want to review this condition btw
+        if can_end_maze_in_one_move(new_state, end, maze) == 1:  # stopping condition, we finished the maze
+                                 #might want to review this condition btw
 
-        #     print("found the END i'm not lost anymore wouhou")
-        #     return maze
-
+            print("found the END i'm not lost anymore wouhou")
+            maze = actualize_state(new_state, end, maze)[1]
+            optimized_update_of_the_visual_window(                                              #haven't tried it yet
+                        maze, current_state, end, cell_width, cell_height, blue_rectangle_ids, green_rectangle_ids, canva
+                )
+            return maze
+        new_state = random_choose_between_possible_undiscovered_states(current_state, end, maze)
+        maze = actualize_state(current_state, new_state, maze)[0]
+        time.sleep(0.1)
+        optimized_update_of_the_visual_window(                                              #haven't tried it yet
+                maze, current_state, new_state, cell_width, cell_height, blue_rectangle_ids, green_rectangle_ids, canva
+            )
         current_state = new_state
     print("still stuck, it sucks tho")
 
 
     return 10000
+
+
 
 
 #Third modelization, here we will add the distance and choose the movement
@@ -322,62 +426,15 @@ def journey_to_an_unknown_world(
 # Bewhare here the algorithm has a global point of view, he knows where
 # he is, where the start and where the end is
 
-def pure_manhattan_distance_to_end_point(
-        current_state, end, maze
-    ):
-    print(current_state)  #current_stae = 1 when we hit an obstacle
-    print(end)
-    vertical_distance = abs(current_state[0] - end[0])
-    horizontal_distance = abs(current_state[1] - end[1])
-    return horizontal_distance + vertical_distance
-
-
-
-def closest_point_to_the_end(current_state, end, maze):
-    possible_options = possible_movement(current_state, maze)
-    smallest_distance = 1000000
-    counter = 0
-    distances = []
-    for option in possible_options:
-        if(not(option == 0 or option == -1 or option == 2)):          # for now we don't make difference between wall and border
-            current_distance = pure_manhattan_distance_to_end_point(possible_options[counter], end, maze)
-            if(current_distance < smallest_distance):
-                smallest_distance = current_distance
-                option_closest_to_the_end = option
-            distances.append(current_distance)
-        else:
-            distances.append(10000)
-        counter += 1
-    if(maze_is_finished(current_state, end, maze)):
-        return [1, 1]
-    return [distances, option_closest_to_the_end]
-    
-
-
-def maze_is_finished(current_state, end, maze):
-    if(current_state == end):
-        return 1
-    return 0
-
-
-def go_to_closest_point_to_the_end(current_state, end, maze):
-
-    next_state = closest_point_to_the_end(current_state, end, maze)[1]
-    distances = closest_point_to_the_end(current_state, end, maze)[0]
-    maze = actualize_state(current_state, next_state, maze)[0]
-
-    return [next_state, maze]
-
-
-    
-
-
 def closest_point_to_the_end_journey(
     obstacles, start, end, num_rows, num_columns, maze
 ):
+        
+    #If we can go to the closest point to the end, we do
+    #else, we go to an unknown state
 
     init_state = start
-    [new_state, new_maze] = go_to_closest_point_to_the_end(init_state, end, maze)
+    [new_state, maze] = go_to_closest_point_to_the_end(init_state, end, maze)
     [current_state, current_maze] = [new_state, new_maze]
     update_of_the_visual_window(
                             maze, cell_width, cell_height, blue_rectangle_ids, green_rectangle_ids, canva
@@ -511,7 +568,7 @@ def update_of_the_visual_window(
     canva.update()
 
 
-def optimized_update_of_the_visual_window(
+def optimized_update_of_the_visual_window(                                              #haven't tried it yet
     maze, current_state, next_state, cell_width, cell_height, blue_rectangles_ids, green_rectangles_ids, canva
 ):
     
@@ -530,20 +587,19 @@ def optimized_update_of_the_visual_window(
 # Initialize everything 
 window_height = 900
 window_width = 900
-num_rows = 30
-num_columns = 30
+num_rows = 10
+num_columns = 10
 cell_height = int(window_height / num_columns)
 cell_width = int(window_width / num_rows)
-start = [10,4]
-end = [1, 25]
-obstacles = [[0,5], [1,5], [2, 5], [3, 5], [4, 5], [5, 5], [6, 5], [7, 5]]
+start = [8,9]
+end = [1, 9]
+obstacles = [[0,5], [1,5], [2, 5], [3, 5], [4, 5], [5, 5], [6, 5], [7, 5], [8,5], [9,5]]
 
 
 maze = init_empty_maze(num_rows, num_columns)
 maze = init_start_end(maze, start, end)
 maze = init_obstacles(maze, obstacles)
 
-print(possible_next_not_special_undiscovered_state(start, maze))
 
 
 #visual init
